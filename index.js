@@ -13,7 +13,7 @@ app.use(express.json());
 // MongoDB connection URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.eyvufda.mongodb.net/?appName=Cluster0`;
 
-// Create a MongoClient with MongoClientOptions to set the Stable API version
+// Create a MongoClient with options
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -24,13 +24,14 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server (optional starting in v4.7)
+    // Connect to MongoDB
     await client.connect();
 
-    // Database and collection
+    // Collections
     const serviceCollection = client.db('carDoctor').collection('services');
+    const bookingCollection = client.db('carDoctor').collection('bookings');
 
-    // Route to get all services
+    // Get all services
     app.get('/services', async (req, res) => {
       try {
         const result = await serviceCollection.find().toArray();
@@ -40,14 +41,12 @@ async function run() {
       }
     });
 
-    // Route to get a specific service by ID
+    // Get a specific service by ID
     app.get('/services/:id', async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
-        const options = {
-          projection: { title: 1, price: 1, service_id: 1, img: 1 },
-        };
+        const options = { projection: { service_id: 1, title: 1, img: 1, price: 1 } };
 
         const service = await serviceCollection.findOne(query, options);
         if (service) {
@@ -60,9 +59,20 @@ async function run() {
       }
     });
 
-    // Ping to confirm a successful connection
+    // Create a new booking
+    app.post('/bookings', async (req, res) => {
+      try {
+        const booking = req.body;
+        const result = await bookingCollection.insertOne(booking);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to create booking' });
+      }
+    });
+
+    // Confirm successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Connected to MongoDB successfully!");
   } catch (error) {
     console.error("Failed to connect to MongoDB:", error);
   }
