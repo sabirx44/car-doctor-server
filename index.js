@@ -45,9 +45,10 @@ async function run() {
     app.get('/services/:id', async (req, res) => {
       try {
         const id = req.params.id;
-        const service = await serviceCollection.findOne({ _id: new ObjectId(id) }, {
-          projection: { service_id: 1, title: 1, img: 1, price: 1 }
-        });
+        const service = await serviceCollection.findOne(
+          { _id: new ObjectId(id) },
+          { projection: { service_id: 1, title: 1, img: 1, price: 1 } }
+        );
         if (service) {
           res.send(service);
         } else {
@@ -77,6 +78,17 @@ async function run() {
         res.send(bookings);
       } catch (error) {
         res.status(500).send({ message: 'Failed to retrieve bookings' });
+      }
+    });
+
+    // Delete a booking by ID
+    app.delete('/bookings/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await bookingCollection.deleteOne({ _id: new ObjectId(id) });
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to delete booking' });
       }
     });
 
