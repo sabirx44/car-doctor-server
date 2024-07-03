@@ -27,15 +27,15 @@ async function run() {
     // Connect to MongoDB
     await client.connect();
 
-    // Collections
+    // Get collections
     const serviceCollection = client.db('carDoctor').collection('services');
     const bookingCollection = client.db('carDoctor').collection('bookings');
 
     // Get all services
     app.get('/services', async (req, res) => {
       try {
-        const result = await serviceCollection.find().toArray();
-        res.send(result);
+        const services = await serviceCollection.find().toArray();
+        res.send(services);
       } catch (error) {
         res.status(500).send({ message: 'Failed to retrieve services' });
       }
@@ -45,10 +45,9 @@ async function run() {
     app.get('/services/:id', async (req, res) => {
       try {
         const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const options = { projection: { service_id: 1, title: 1, img: 1, price: 1 } };
-
-        const service = await serviceCollection.findOne(query, options);
+        const service = await serviceCollection.findOne({ _id: new ObjectId(id) }, {
+          projection: { service_id: 1, title: 1, img: 1, price: 1 }
+        });
         if (service) {
           res.send(service);
         } else {
@@ -67,6 +66,17 @@ async function run() {
         res.send(result);
       } catch (error) {
         res.status(500).send({ message: 'Failed to create booking' });
+      }
+    });
+
+    // Get bookings by email (optional)
+    app.get('/bookings', async (req, res) => {
+      try {
+        const query = req.query?.email ? { email: req.query.email } : {};
+        const bookings = await bookingCollection.find(query).toArray();
+        res.send(bookings);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to retrieve bookings' });
       }
     });
 
