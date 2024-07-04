@@ -70,7 +70,7 @@ async function run() {
       }
     });
 
-    // Get bookings by email (optional)
+    // Get bookings, optionally by email
     app.get('/bookings', async (req, res) => {
       try {
         const query = req.query?.email ? { email: req.query.email } : {};
@@ -78,6 +78,24 @@ async function run() {
         res.send(bookings);
       } catch (error) {
         res.status(500).send({ message: 'Failed to retrieve bookings' });
+      }
+    });
+
+    // Update a booking by ID
+    app.patch('/bookings/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedBooking = req.body;
+        const updateDoc = {
+          $set: {
+            status: updatedBooking.status
+          },
+        };
+        const result = await bookingCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to update booking' });
       }
     });
 
