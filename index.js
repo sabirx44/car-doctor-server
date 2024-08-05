@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
@@ -7,8 +9,12 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173'], // Change for production
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // MongoDB connection URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.eyvufda.mongodb.net/?appName=Cluster0`;
@@ -31,6 +37,16 @@ async function run() {
     const serviceCollection = client.db('carDoctor').collection('services');
     const bookingCollection = client.db('carDoctor').collection('bookings');
 
+    // JWT Authentication
+    app.post('/jwt', (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1h' });
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: false // Set to true for production
+      }).send({ success: true });
+    });
+
     // Get all services
     app.get('/services', async (req, res) => {
       try {
@@ -49,11 +65,7 @@ async function run() {
           { _id: new ObjectId(id) },
           { projection: { service_id: 1, title: 1, img: 1, price: 1 } }
         );
-        if (service) {
-          res.send(service);
-        } else {
-          res.status(404).send({ message: "Service not found" });
-        }
+        service ? res.send(service) : res.status(404).send({ message: "Service not found" });
       } catch (error) {
         res.status(500).send({ message: 'Failed to retrieve service' });
       }
@@ -85,14 +97,11 @@ async function run() {
     app.patch('/bookings/:id', async (req, res) => {
       try {
         const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
         const updatedBooking = req.body;
-        const updateDoc = {
-          $set: {
-            status: updatedBooking.status
-          },
-        };
-        const result = await bookingCollection.updateOne(filter, updateDoc);
+        const result = await bookingCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: updatedBooking.status } }
+        );
         res.send(result);
       } catch (error) {
         res.status(500).send({ message: 'Failed to update booking' });
